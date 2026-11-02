@@ -90,8 +90,38 @@ describe("startScreenMetadata", () => {
     expect(startScreenMetadata("gjc-transcript", GJC.replace("opus-5.5", "kimi-k3"))).toEqual({ model: "kimi-k3", reasoning_effort: "xhigh" });
   });
 
+  it("reads pi's footer, which states the model and level from its first frame", () => {
+    // pi's own footer row, as herdr's text read of the live viewport gives it (pi 1.4.0, 2026-11-01): the
+    // cwd, then the context readout, then the model and its thinking level at the right end. pi writes the
+    // model id alone, without the provider that serves it, and it writes no session file until a prompt is
+    // sent, so this row is all there is to go by before the first answer.
+    const pi = [
+      " \u259d\u259c\u2588\u2588\u2588\u2588\u2588\u2588\u2580 pi v1.4.0",
+      " \u2588\u2580 \u2588 escape interrupt \u00b7 ctrl+c/ctrl+d clear/exit \u00b7 / commands \u00b7 ! bash \u00b7 ctrl+o more",
+      "/tmp/ovis-repro                                0.0%/262k (auto)                    zorro-davidau-3.8-flash-next \u2022 xhigh",
+    ].join("\n");
+    expect(startScreenMetadata("pi-transcript", pi)).toEqual({ model: "zorro-davidau-3.8-flash-next", reasoning_effort: "xhigh" });
+    // the model alone, as pi draws it when the model does not think
+    expect(startScreenMetadata("pi-transcript", pi.replace(" \u2022 xhigh", ""))).toEqual({ model: "zorro-davidau-3.8-flash-next", reasoning_effort: null });
+    // every level pi names on its footer
+    for (const level of ["off", "minimal", "low", "medium", "high", "xhigh", "max"]) {
+      expect(startScreenMetadata("pi-transcript", pi.replace("xhigh", level))).toEqual({ model: "zorro-davidau-3.8-flash-next", reasoning_effort: level });
+    }
+    // the readout is the anchor: a line that only names a percentage, or only ends in a level word, is no footer
+    expect(startScreenMetadata("pi-transcript", "\u2022 used 50%/200k of the context")).toEqual({ model: null, reasoning_effort: null });
+    expect(startScreenMetadata("pi-transcript", "\u2022 the model can think high")).toEqual({ model: null, reasoning_effort: null });
+    // a footer scrolled off screen, or a pane that draws none, says nothing rather than guessing
+    expect(startScreenMetadata("pi-transcript", " \u2588\u2580 \u2588 escape interrupt")).toEqual({ model: null, reasoning_effort: null });
+    // pi's footer is pi's screen alone: codex's footer is not read as pi's
+    expect(startScreenMetadata("pi-transcript", CODEX)).toEqual({ model: null, reasoning_effort: null });
+  });
+
   it("reads only the agents whose screen it knows", () => {
     expect(readsStartScreen("codex-transcript")).toBeTrue();
+    // pi too: its transcript begins only with the first prompt, while its footer is drawn from the start
+    expect(readsStartScreen("pi-transcript")).toBeTrue();
+    // cmd writes pi's transcript format but draws its own screen, which has not been read from a live session
+    expect(readsStartScreen("cmd-transcript")).toBeFalse();
     expect(readsStartScreen("opencode-transcript")).toBeFalse();
     expect(startScreenMetadata("omo-transcript", CODEX)).toEqual({ model: null, reasoning_effort: null });
     expect(startScreenMetadata("claude-transcript", CODEX)).toEqual({ model: null, reasoning_effort: null });

@@ -31,6 +31,14 @@ export const CLAUDE_ULTRACODE_SETTINGS = '{"ultracode":true}';
  * levels depend on the model and client." (developers.openai.com/codex/config-reference, read 2026-10-20)
  */
 export const CODEX_EFFORTS = ["low", "medium", "high", "xhigh", "max", "ultra"] as const;
+/**
+ * pi's thinking levels: `--thinking <level> off|minimal|low|medium|high|xhigh|max`, with `--model
+ * <provider/name:modelId[:thinkingLevelId]>` naming the model (`pi --help`, pi 1.4.0, read 2026-11-01).
+ * `off` is a level of its own here, unlike Claude Code and Codex, whose launches name none. A level the
+ * running model cannot do is pi's to refuse or clamp: it says so on the status line, and Ovis repeats
+ * what the footer states rather than what was asked for.
+ */
+export const PI_THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh", "max"] as const;
 
 /**
  * A model name as the CLIs take it after `--model`: one word that never reads as a flag, with an
@@ -61,9 +69,10 @@ export function firstMessageFault(value: unknown, agent: unknown): string | null
 
 type LaunchFlag = "model" | "effort" | "config";
 /** the flags whose values are checked, by agent: Codex's `-c`/`--config` sets `model` and `model_reasoning_effort` too */
-const LAUNCH_FLAGS: Record<"claude" | "codex", Record<string, LaunchFlag>> = {
+const LAUNCH_FLAGS: Record<"claude" | "codex" | "pi", Record<string, LaunchFlag>> = {
   claude: { "--model": "model", "--effort": "effort" },
   codex: { "--model": "model", "-m": "model", "--config": "config", "-c": "config" },
+  pi: { "--model": "model", "--thinking": "effort" },
 };
 
 /**
@@ -96,12 +105,12 @@ const configValue = (value: string): string => {
  */
 export function launchArgsFault(kind: string, args: readonly string[]): string | null {
   if (!args.every(argumentText)) return "agent.args must not contain control characters (a tab or a line break included)";
-  if (kind !== "claude" && kind !== "codex") return null;
-  const efforts: readonly string[] = kind === "claude" ? CLAUDE_EFFORT_ARGS : CODEX_EFFORTS;
+  if (kind !== "claude" && kind !== "codex" && kind !== "pi") return null;
+  const efforts: readonly string[] = kind === "claude" ? CLAUDE_EFFORT_ARGS : kind === "codex" ? CODEX_EFFORTS : PI_THINKING_LEVELS;
   for (let at = 0; at < args.length; at++) {
     const arg = args[at]!;
     if (arg === "--") {
-      if (kind !== "codex") break;
+      if (kind === "claude") break;
       const prompt = args.slice(at + 1);
       if (prompt.length !== 1 || firstMessageFault(prompt[0], true) !== null) return "agent.args must end in one prompt after --, nonempty text of at most 20000 characters";
       break;
@@ -122,7 +131,9 @@ export function launchArgsFault(kind: string, args: readonly string[]): string |
     }
     if (model !== null && !MODEL_NAME.test(model)) return "agent.args --model must name one model";
     if (effort !== null && !efforts.includes(effort)) {
-      return kind === "claude" ? `agent.args --effort must be one of ${efforts.join(", ")}` : `agent.args model_reasoning_effort must be one of ${efforts.join(", ")}`;
+      if (kind === "claude") return `agent.args --effort must be one of ${efforts.join(", ")}`;
+      if (kind === "codex") return `agent.args model_reasoning_effort must be one of ${efforts.join(", ")}`;
+      return `agent.args --thinking must be one of ${efforts.join(", ")}`;
     }
   }
   return null;

@@ -1,4 +1,5 @@
 import type { ConversationMetadata, ConversationResponse } from "../shared/protocol.ts";
+import { PI_THINKING_LEVELS } from "../shared/launch-rules.ts";
 
 /**
  * Models stated by the agent's own layout before its transcript exists.
@@ -86,10 +87,35 @@ function gjcScreen(lines: string[]): Screen {
   return { model, reasoning_effort: found[2]! };
 }
 
+/**
+ * pi's footer, drawn under its composer from its first frame: `<cwd> 0.0%/262k (auto) … <model> • <level>`.
+ * The context readout is the anchor: that line is the only place pi draws it, so a bullet in an answer,
+ * or a message that merely quotes a percentage, cannot pass for the footer. The model sits at the line's
+ * right end exactly as pi shows it — its own id, not a display name — and ` • <level>` is there only when
+ * the model thinks. pi writes no session file until its first prompt is sent, so this is the only place
+ * the model of a pi pane that has not answered yet can come from. Verified on pi 1.4.0, 2026-11-01.
+ * The level word comes from the same list the launch flags are checked against, so the two cannot drift.
+ */
+const PI_READOUT = "\\d+(?:\\.\\d+)?%/\\d+(?:\\.\\d+)?[km]\\b(?:\\s*\\([a-z]+\\))?";
+const PI_FOOTER = new RegExp(`${PI_READOUT}[\\s\\u2502|]*?(\\S+) \\u2022 (${PI_THINKING_LEVELS.join("|")})[\\s\\u2502|]*$`, "u");
+/** the same footer with no thinking level: pi draws the model alone when the model does not think */
+const PI_FOOTER_NO_LEVEL = new RegExp(`${PI_READOUT}[\\s\\u2502|]*(\\S+)[\\s\\u2502|]*$`, "u");
+
+function piScreen(lines: string[]): Screen {
+  const thought = lastMatch(lines, PI_FOOTER);
+  if (thought) return { model: thought[1]!, reasoning_effort: thought[2]! };
+  const plain = lastMatch(lines, PI_FOOTER_NO_LEVEL);
+  return plain ? { model: plain[1]!, reasoning_effort: null } : NOTHING;
+}
+
 const SCREENS: Partial<Record<ConversationResponse["source"], (lines: string[]) => Screen>> = {
   "claude-transcript": claudeScreen,
   "codex-transcript": codexScreen,
   "gjc-transcript": gjcScreen,
+  // pi too: its transcript's first `model_change` line only appears once a prompt has been sent, while
+  // its footer states the model from the first frame. `cmd` is deliberately not here: its status line
+  // was not read from a live session, so its wording is not known to this parser.
+  "pi-transcript": piScreen,
 };
 
 export function readsStartScreen(source: ConversationResponse["source"]): boolean {

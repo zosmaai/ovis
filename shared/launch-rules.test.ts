@@ -8,6 +8,19 @@ describe("an agent's launch arguments", () => {
     expect(launchArgsFault("codex", ["--", "a\nb"])).toContain("control characters");
     expect(launchArgsFault("omp", ["--flag\u001b[2J"])).toContain("control characters");
   });
+  it("takes pi's model, its thinking levels, and its one prompt after --", () => {
+    // pi 1.4.0: `--model <provider/name:modelId[:thinkingLevelId]>`, `--thinking <level>`, and the prompt
+    // after `--`, which pi reads as its `[prompt...]` operand and not as one of its own subcommands
+    expect(launchArgsFault("pi", ["--model", "llama-swap/zorro-davidau-3.8-flash-next", "--thinking", "xhigh"])).toBeNull();
+    expect(launchArgsFault("pi", ["--model=commandcode/gpt-5.1-codex", "--thinking=max"])).toBeNull();
+    expect(launchArgsFault("pi", ["--model", "sonnet", "--thinking", "off", "--", "say hi"])).toBeNull();
+    expect(launchArgsFault("pi", ["--model", "two words"])).toContain("--model");
+    expect(launchArgsFault("pi", ["--model", "--thinking"])).toContain("--model");
+    expect(launchArgsFault("pi", ["--thinking", "ultra"])).toBe("agent.args --thinking must be one of off, minimal, low, medium, high, xhigh, max");
+    // one prompt after --, by a first message's rules, as with Codex
+    expect(launchArgsFault("pi", ["--", "a", "b"])).toContain("one prompt");
+    expect(launchArgsFault("pi", ["--", "   "])).toContain("one prompt");
+  });
   it("takes Codex's one prompt after -- by a first message's rules", () => {
     expect(launchArgsFault("codex", ["--", "$review-pr the branch"])).toBeNull();
     expect(launchArgsFault("codex", ["--", "   "])).toContain("one prompt");
@@ -62,6 +75,11 @@ describe("every spelling the CLIs accept for a model or an effort", () => {
     ["codex", ["--config=model_reasoning_effort=ultracode"], "model_reasoning_effort"],
     // a flag's value is the flag's: "--" there is not the end of the options
     ["codex", ["-m", "--"], "--model"],
+    // pi's flags in the spellings its parser takes
+    ["pi", ["--thinking=INVALID"], "--thinking"],
+    ["pi", ["--thinking", "INVALID"], "--thinking"],
+    ["pi", ["--model=two words"], "--model"],
+    ["pi", ["--model", "llama-swap/x", "--thinking=high", "--", "hi"], null],
   ] as const)("%s %j", (kind, args, flag) => {
     const fault = launchArgsFault(kind, args);
     if (flag === null) expect(fault).toBeNull();

@@ -1,6 +1,6 @@
 import { expect, it } from "bun:test";
 
-import { CLAUDE_EFFORTS, CODEX_EFFORTS, firstPromptDelivery, launchAgent, launchArgs, launchCapabilities, launchChoiceFault, modelSuggestions } from "./agentLaunchMode.ts";
+import { CLAUDE_EFFORTS, CODEX_EFFORTS, firstPromptDelivery, launchAgent, launchArgs, launchCapabilities, launchChoiceFault, modelSuggestions, PI_THINKING_LEVELS } from "./agentLaunchMode.ts";
 
 const plain = { claudeLaunchMode: "default", codexLaunchMode: "default" } as const;
 
@@ -36,9 +36,15 @@ it("names a model and an effort for the agents whose CLI documents them, and a p
   // clap takes everything after `--` as the PROMPT positional (codex -- logout started the TUI)
   expect(launchCapabilities("codex")).toEqual({ model: true, efforts: CODEX_EFFORTS, ultracode: false, positionalPrompt: true });
   // Letta Code takes a prompt only with `-p`, its headless mode (letta-code 0.34.23, src/cli/args.ts)
-  for (const kind of ["omp", "pi", "gemini", "opencode", "letta", ""]) expect(launchCapabilities(kind)).toEqual({ model: false, efforts: [], ultracode: false, positionalPrompt: false });
+  for (const kind of ["omp", "gemini", "opencode", "letta", ""]) expect(launchCapabilities(kind)).toEqual({ model: false, efforts: [], ultracode: false, positionalPrompt: false });
+  // pi: `--model <provider/name:modelId[:thinkingLevelId]>` and `--thinking <level>`, and its `[prompt...]`
+  // operand after `--` (pi 1.4.0 `pi --help`, read 2026-11-01)
+  expect(launchCapabilities("pi")).toEqual({ model: true, efforts: PI_THINKING_LEVELS, ultracode: false, positionalPrompt: true });
+  expect(PI_THINKING_LEVELS).toEqual(["off", "minimal", "low", "medium", "high", "xhigh", "max"]);
   expect(modelSuggestions("claude")).toEqual(["sonnet", "opus", "haiku"]);
   expect(modelSuggestions("codex")).toEqual([]);
+  // a pi model is always `provider/id`: typed whole, with nothing to suggest
+  expect(modelSuggestions("pi")).toEqual([]);
 });
 
 it("puts the model, the effort and then the prompt after the mode, each in the agent's own syntax", () => {
@@ -53,6 +59,25 @@ it("puts the model, the effort and then the prompt after the mode, each in the a
   for (const prompt of ["logout", "update", "--help", "-p x"]) expect(launchArgs("codex", plain, { prompt })).toEqual(["--", prompt]);
   // nothing chosen adds nothing
   expect(launchArgs("codex", plain, { model: "  ", effort: "", prompt: "" })).toBeUndefined();
+});
+
+it("starts pi with its own model and thinking flags, and its prompt after the separator", () => {
+  expect(launchArgs("pi", plain, { model: "llama-swap/zorro-davidau-3.8-flash-next", effort: "xhigh", prompt: " Review the branch " }))
+    .toEqual(["--model", "llama-swap/zorro-davidau-3.8-flash-next", "--thinking", "xhigh", "--", "Review the branch"]);
+  // `off` is a level pi names, so it is passed rather than left to the agent
+  expect(launchArgs("pi", plain, { effort: "off" })).toEqual(["--thinking", "off"]);
+  expect(launchAgent("pi", plain, { model: "commandcode/gpt-5.1-codex" })).toEqual({ kind: "pi", args: ["--model", "commandcode/gpt-5.1-codex"] });
+  // pi reads a bare operand as one of its own subcommands, so the prompt waits behind `--` for it too
+  for (const prompt of ["update", "list-models", "--help", "-p x"]) expect(launchArgs("pi", plain, { prompt })).toEqual(["--", prompt]);
+  expect(firstPromptDelivery("pi", "Fix it")).toBe("positional");
+  expect(firstPromptDelivery("pi", "line\nbreak")).toBe("pending");
+  // what the dialog refuses, the launch never passes
+  expect(launchChoiceFault("pi", { model: "llama-swap/x", effort: "xhigh" })).toBeNull();
+  expect(launchChoiceFault("pi", { effort: "ultra" })).toBe("effort");
+  expect(launchChoiceFault("pi", { model: "two words" })).toBe("model");
+  expect(launchArgs("pi", plain, { effort: "ultra" })).toBeUndefined();
+  // pi has no Ultracode
+  expect(launchChoiceFault("pi", { ultracode: true })).toBe("ultracode");
 });
 
 it("offers Claude Code's five effort levels, with Ultracode a switch of its own rather than a level", () => {

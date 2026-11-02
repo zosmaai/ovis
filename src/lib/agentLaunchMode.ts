@@ -9,9 +9,9 @@
  * nothing is guessed for the rest. The bridge checks them again by the same rules
  * (shared/launch-rules.ts).
  */
-import { argumentText, CLAUDE_EFFORTS, CLAUDE_ULTRACODE_SETTINGS, CODEX_EFFORTS, MODEL_NAME } from "../../shared/launch-rules.ts";
+import { argumentText, CLAUDE_EFFORTS, CLAUDE_ULTRACODE_SETTINGS, CODEX_EFFORTS, MODEL_NAME, PI_THINKING_LEVELS } from "../../shared/launch-rules.ts";
 
-export { CLAUDE_EFFORTS, CODEX_EFFORTS };
+export { CLAUDE_EFFORTS, CODEX_EFFORTS, PI_THINKING_LEVELS };
 
 /** Claude Code's `--permission-mode` choices; "default" leaves the flag out */
 export const CLAUDE_LAUNCH_MODES = ["default", "acceptEdits", "auto", "plan", "dontAsk", "bypassPermissions"] as const;
@@ -72,6 +72,13 @@ const CAPABILITIES: Readonly<Record<string, LaunchCapabilities>> = {
   // 2026-10-20: `codex -- logout`, `-- update`, `-- --help` and `-- '-p x'` all started the TUI, and
   // `codex -- logout extra` failed with the root `[PROMPT]` usage, `codex logout extra` with the subcommand's
   codex: { model: true, efforts: CODEX_EFFORTS, ultracode: false, positionalPrompt: true },
+  // `pi [options...] [command...] [prompt...]`: `--model <provider/name:modelId[:thinkingLevelId]>` and
+  // `--thinking <level>` (`pi --help`, pi 1.4.0, read 2026-11-01). The prompt goes after `--`: pi takes a
+  // bare operand as one of its own subcommands, so it is checked the way Claude Code's is. Verified on pi
+  // 1.4.0 on 2026-11-01 in a scratch directory: `pi --model llama-swap/<id> -- 'say hi'` started the TUI
+  // with that model on its footer and that text in its composer, and `pi -- update` drew the TUI rather
+  // than running pi's updater. No model alias: a pi model is always `provider/id`, typed whole.
+  pi: { model: true, efforts: PI_THINKING_LEVELS, ultracode: false, positionalPrompt: true },
 };
 
 /**
@@ -139,7 +146,9 @@ export function launchArgs(kind: string, modes: { claudeLaunchMode: ClaudeLaunch
   const model = choices.model?.trim() ?? "";
   if (model !== "" && can.model && MODEL_NAME.test(model)) args.push("--model", model);
   if (choices.effort && can.efforts.includes(choices.effort)) {
-    args.push(...(kind === "codex" ? ["-c", `model_reasoning_effort=${choices.effort}`] : ["--effort", choices.effort]));
+    if (kind === "codex") args.push("-c", `model_reasoning_effort=${choices.effort}`);
+    else if (kind === "pi") args.push("--thinking", choices.effort);
+    else args.push("--effort", choices.effort);
   }
   // after the effort, which it keeps: off adds nothing, so the agent's own settings decide, as "Agent default" does
   if (choices.ultracode && can.ultracode) args.push("--settings", CLAUDE_ULTRACODE_SETTINGS);
