@@ -105,7 +105,7 @@ import { useSplitLayout, useSplitRecheck, useSplitState } from "./lib/useSplitVi
 import { linkSelects, useLinkLanding, useMachineGone, useNotificationTargets, useSelectedLayout, useSelectedMachine, useSelectedPane, useSelectionMark, useSelectionState, useSelectPane, useSelectTarget } from "./lib/useSelection.ts";
 import { useAddressBar } from "./lib/useAddressBar.ts";
 
-const APP_TITLE = "Ovis";
+const APP_TITLE = "Relay";
 /** how soon after a key press a focus counts as the user's own (lastKeyAtRef) */
 const KEY_FOCUS_MS = 1000;
 
@@ -383,7 +383,7 @@ export function App() {
 
   const tabTitle = selectedPane ? tabPaneTitle(selectedPane) : null;
   useEffect(() => {
-    document.title = tabTitle ? `${tabTitle} · Ovis` : APP_TITLE;
+    document.title = tabTitle ? `${tabTitle} · ${APP_TITLE}` : APP_TITLE;
   }, [tabTitle]);
 
   // A new tab's workspace: the named one, else the selected pane's. Its folder is the workspace's:

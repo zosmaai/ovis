@@ -48,7 +48,7 @@ export function FileReader({ target }: { target: ReaderTarget }) {
   }, []);
 
   useEffect(() => {
-    document.title = `${path.split("/").pop() || path} · Ovis`;
+    document.title = `${path.split("/").pop() || path} · Relay`;
   }, [path]);
 
   const open = useCallback((linked: string) => {
