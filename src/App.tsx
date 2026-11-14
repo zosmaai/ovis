@@ -154,7 +154,7 @@ function ConnectionChip({ connected, word, title }: { connected: boolean; word: 
 function Brand() {
   return (
     <h1 className="brand">
-      <img src="/icons/icon-192.png?v=sheep1" alt="" width="22" height="22" className="brand-mark" />
+      <img src="/icons/icon-192.png?v=relay1" alt="" width="22" height="22" className="brand-mark" />
       <span className="brand-name">
         Ovis
       </span>

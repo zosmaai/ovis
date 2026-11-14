@@ -120,8 +120,9 @@ describe("DESIGN.md", () => {
 const ICON_VERSIONS: Record<string, { sha256: string; cacheName: string }> = {
   ram1: { sha256: "ed82342db3ec3ed2151ddd2d0d77805233e9251758e29972b4f09aa95602041e", cacheName: "herdr-web-ui-v4-ram" },
   sheep1: { sha256: "cda4de69ca5e795f995a0abfb7a52fb3036785f39448aeba002d9171c8bbb2b7", cacheName: "ovis-v4-sheep" },
+  relay1: { sha256: "6e883346edbc779c55b5097f70da3b74355d1c9d4e6a19bbb0347c9599a69ff3", cacheName: "ovis-v5-relay" },
 };
-const CURRENT_ICONS = "sheep1";
+const CURRENT_ICONS = "relay1";
 
 /** The icon images: dotfiles and other strays in public/icons (a Finder .DS_Store) are not icons. */
 function iconFiles(): string[] {

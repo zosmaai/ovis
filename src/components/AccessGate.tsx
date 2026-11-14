@@ -93,7 +93,7 @@ export function AccessGate({ reason, initialCode, consumePairCode, pairingUnconf
   return (
     <main className="access-gate-screen">
       <div className="access-gate" data-testid="token-gate">
-        <img src="/icons/icon-192.png?v=sheep1" alt="" width="44" height="44" className="access-gate-mark" />
+        <img src="/icons/icon-192.png?v=relay1" alt="" width="44" height="44" className="access-gate-mark" />
         <h1 id="access-gate-title" className="access-gate-title">
           Relay
         </h1>

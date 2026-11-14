@@ -148,7 +148,7 @@ function Welcome({ dispatch, onClose, hidden }: Pick<SetupGuideProps, "dispatch"
   return (
     <div className="setup-guide" role="region" aria-label={t("Setup guide")} hidden={hidden}>
       <div className="setup-guide-inner setup-welcome">
-        <img src="/icons/icon-192.png?v=sheep1" alt="" width="72" height="72" className="setup-welcome-mark" />
+        <img src="/icons/icon-192.png?v=relay1" alt="" width="72" height="72" className="setup-welcome-mark" />
         <h2>{t("Welcome to Ovis")}</h2>
         <p className="setup-lead">{t("Is this your first time using Ovis?")}</p>
         <div className="setup-choices">

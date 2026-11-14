@@ -44,7 +44,7 @@ export function RelayShell({ state, scoped, iosTab, onPair, onRetry, onCancel, o
   return (
     <main className="relay-shell-screen" data-relay-state={stateName}>
       <div className="relay-shell">
-        <img src="/icons/icon-192.png?v=sheep1" alt="" width="44" height="44" className="relay-shell-mark" />
+        <img src="/icons/icon-192.png?v=relay1" alt="" width="44" height="44" className="relay-shell-mark" />
         {state.kind === "list" && (
           <>
             <h1 className="relay-shell-title">{t("Your PCs")}</h1>
